@@ -1,0 +1,20 @@
+[project]
+name = "x-alert-bot"
+version = "0.1.0"
+description = "Poll X/Twitter and send alerts to Telegram"
+requires-python = ">=3.13,<3.15"
+dependencies = [
+    "aiogram>=3.22.0",
+    "httpx>=0.28.0",
+    "pydantic-settings>=2.11.0",
+]
+
+[dependency-groups]
+dev = ["ruff>=0.8.0"]
+
+[tool.ruff]
+line-length = 92
+target-version = "py313"
+
+[tool.ruff.format]
+quote-style = "single"
