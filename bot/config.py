@@ -19,6 +19,8 @@ class Config(BaseSettings):
     watch_users: list[str] = []
     # Poll interval in minutes
     poll_interval: int = 30
+    # Admin Telegram ID for error notifications
+    admin_id: int | None = None
 
     log_level: Literal['DEBUG', 'INFO', 'WARNING', 'ERROR'] = 'INFO'
 

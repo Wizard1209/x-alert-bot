@@ -5,6 +5,7 @@ import sys
 from aiogram import Bot, Dispatcher
 
 from bot.config import CONFIG
+from bot.errors import setup_error_handler
 from bot.handlers import router
 from bot.scheduler import run_poll_loop
 from bot.storage import UserStorage
@@ -23,6 +24,7 @@ async def main() -> None:
     client = TwitterClient(bearer_token=CONFIG.x_api_key)
 
     dp = Dispatcher()
+    setup_error_handler(dp)
     dp.include_router(router)
     dp['storage'] = storage
 
