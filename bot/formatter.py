@@ -10,7 +10,7 @@ from aiogram.utils.formatting import (
     as_line,
 )
 
-from bot.twitter import Tweet
+from bot.twitter import Tweet, TweetType
 
 
 @dataclass
@@ -20,33 +20,57 @@ class TelegramAlert:
     text: Text
     photo_url: str | None = None
     extra_photos: list[str] = field(default_factory=list)
+    silent: bool = False
+
+
+_TYPE_LABELS = {
+    TweetType.RETWEET: '🔁 Retweet',
+    TweetType.REPLY: '💬 Reply',
+    TweetType.QUOTE: '💬 Quote',
+}
 
 
 def format_tweet(tweet: Tweet) -> TelegramAlert:
     """Format a single Tweet into a Telegram-ready alert."""
+    # Type badge for non-original tweets
+    type_label = _TYPE_LABELS.get(tweet.tweet_type)
+
     # Author line: **@username** (Name)
     author = as_line(
         Bold(f'@{tweet.author_username}'),
         f' ({tweet.author_name})',
     )
 
-    text = as_list(
-        author,
-        Text(tweet.text),
-        '',
-        TextLink('Open on X', url=tweet.url),
-        'Распространите это среди жильцов нашего ЖЭКа.',
-        sep='\n',
-    )
+    parts: list = []
+    if type_label:
+        parts.append(Bold(type_label))
+    parts.append(author)
+    parts.append(Text(tweet.text))
+    parts.append('')
+    parts.append(TextLink('Open on X', url=tweet.url))
+    if tweet.tweet_type == TweetType.ORIGINAL:
+        parts.append('❤️ like · 🔁 share · 💬 comment')
+
+    text = as_list(*parts, sep='\n')
 
     # First media URL becomes the photo preview, rest are extras
     photo_url = tweet.media_urls[0] if tweet.media_urls else None
-    extra_photos = tweet.media_urls[1:] if len(tweet.media_urls) > 1 else []
+    extra_photos = (
+        tweet.media_urls[1:] if len(tweet.media_urls) > 1 else []
+    )
+
+    # Retweets and replies are sent silently
+    silent = tweet.tweet_type in (
+        TweetType.RETWEET,
+        TweetType.REPLY,
+        TweetType.QUOTE,
+    )
 
     return TelegramAlert(
         text=text,
         photo_url=photo_url,
         extra_photos=extra_photos,
+        silent=silent,
     )
 
 

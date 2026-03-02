@@ -15,21 +15,28 @@ logger = logging.getLogger(__name__)
 
 async def send_alert(bot: Bot, chat_id: int, alert: TelegramAlert) -> None:
     """Send a single TelegramAlert to a chat."""
+    silent = alert.silent
     if alert.photo_url:
         await bot.send_photo(
             chat_id=chat_id,
             photo=alert.photo_url,
+            disable_notification=silent,
             **alert.text.as_caption_kwargs(),
         )
     else:
         await bot.send_message(
             chat_id=chat_id,
+            disable_notification=silent,
             **alert.text.as_kwargs(),
         )
 
     # Extra photos as separate messages
     for url in alert.extra_photos:
-        await bot.send_photo(chat_id=chat_id, photo=url)
+        await bot.send_photo(
+            chat_id=chat_id,
+            photo=url,
+            disable_notification=silent,
+        )
 
 
 async def run_poll_loop(

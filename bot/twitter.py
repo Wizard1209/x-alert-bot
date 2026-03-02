@@ -13,12 +13,20 @@ logger = logging.getLogger(__name__)
 BASE_URL = 'https://api.x.com/2'
 
 
+class TweetType:
+    ORIGINAL = 'original'
+    RETWEET = 'retweet'
+    REPLY = 'reply'
+    QUOTE = 'quote'
+
+
 @dataclass
 class Tweet:
     id: str
     text: str
     created_at: datetime
     url: str
+    tweet_type: str = TweetType.ORIGINAL
     # Author info (from expansions)
     author_username: str = ''
     author_name: str = ''
@@ -63,7 +71,7 @@ class TwitterClient:
             'query': query,
             'max_results': 100,
             'sort_order': 'recency',
-            'tweet.fields': 'created_at,text,entities',
+            'tweet.fields': 'created_at,text,entities,referenced_tweets',
             'expansions': 'author_id,attachments.media_keys',
             'user.fields': (
                 'username,name,public_metrics,'
@@ -142,6 +150,19 @@ class TwitterClient:
             author = authors.get(t.get('author_id', ''), {})
             username = author.get('username', '')
 
+            # Determine tweet type from referenced_tweets
+            tweet_type = TweetType.ORIGINAL
+            refs = t.get('referenced_tweets', [])
+            for ref in refs:
+                rt = ref.get('type', '')
+                if rt == 'retweeted':
+                    tweet_type = TweetType.RETWEET
+                    break
+                elif rt == 'replied_to':
+                    tweet_type = TweetType.REPLY
+                elif rt == 'quoted':
+                    tweet_type = TweetType.QUOTE
+
             # Resolve media URLs for this tweet
             tweet_media: list[str] = []
             media_keys = t.get('attachments', {}).get(
@@ -168,6 +189,7 @@ class TwitterClient:
                 Tweet(
                     id=tid,
                     text=tweet_text,
+                    tweet_type=tweet_type,
                     created_at=datetime.fromisoformat(
                         t['created_at'].replace('Z', '+00:00')
                     ),
