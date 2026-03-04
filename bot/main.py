@@ -3,6 +3,7 @@ import logging
 import sys
 
 from aiogram import Bot, Dispatcher
+from aiogram.types import BotCommand, BotCommandScopeAllPrivateChats
 
 from bot.config import CONFIG
 from bot.errors import setup_error_handler
@@ -32,6 +33,19 @@ async def main() -> None:
 
     async def on_startup() -> None:
         nonlocal poll_task
+        await bot.set_my_commands(
+            commands=[
+                BotCommand(
+                    command='start',
+                    description='Start receiving alerts',
+                ),
+                BotCommand(
+                    command='status',
+                    description='Check registration status',
+                ),
+            ],
+            scope=BotCommandScopeAllPrivateChats(),
+        )
         poll_task = asyncio.create_task(
             run_poll_loop(bot, client, storage)
         )
