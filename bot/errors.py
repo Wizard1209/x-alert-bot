@@ -11,15 +11,12 @@ from aiogram.utils.formatting import Bold, Pre, Text, as_list
 from bot.config import CONFIG
 
 
-async def global_error_handler(
-    event: ErrorEvent, bot: Bot
-) -> bool:
-    error = event.exception
-    error_class = type(error).__name__
-
+async def notify_admin(bot: Bot, error: Exception) -> None:
+    """Send error notification to admin. Safe to call from anywhere."""
     if not CONFIG.admin_id:
-        return True
+        return
 
+    error_class = type(error).__name__
     tb = ''.join(
         traceback.format_exception(
             type(error), error, error.__traceback__
@@ -46,6 +43,11 @@ async def global_error_handler(
             CONFIG.admin_id, **content.as_kwargs()
         )
 
+
+async def global_error_handler(
+    event: ErrorEvent, bot: Bot
+) -> bool:
+    await notify_admin(bot, event.exception)
     return True
 
 

@@ -97,28 +97,11 @@ class TwitterClient:
         resp.raise_for_status()
         data = resp.json()
 
-        tweets_raw = data.get('data', [])
-        if not tweets_raw and since_id:
-            # Cursor may be stale (>7 days). Fallback to time window.
-            logger.warning(
-                'since_id %s returned 0 tweets, falling back to'
-                ' start_time',
-                since_id,
-            )
-            params.pop('since_id')
-            start = datetime.now(timezone.utc) - timedelta(
-                minutes=CONFIG.poll_interval
-            )
-            params['start_time'] = start.strftime(
-                '%Y-%m-%dT%H:%M:%SZ'
-            )
-            resp = await self._client.get(
-                '/tweets/search/recent', params=params
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            tweets_raw = data.get('data', [])
+        # Log X API soft errors (e.g. partial failures)
+        if api_errors := data.get('errors'):
+            logger.warning('X API soft errors: %s', api_errors)
 
+        tweets_raw = data.get('data', [])
         if not tweets_raw:
             logger.info('Poll: 0 tweets returned')
             return [], None
