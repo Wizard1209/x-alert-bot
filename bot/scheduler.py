@@ -8,6 +8,7 @@ Three-layer decomposition:
 
 import asyncio
 import logging
+from datetime import datetime, timezone
 from typing import Any
 
 from aiogram import Bot
@@ -95,9 +96,10 @@ async def poll_step(
     client: TwitterClient,
     storage: UserStorage,
     cursor: str | None,
+    last_polled: datetime | None = None,
 ) -> str | None:
     """Run one poll-then-deliver cycle. Returns the new cursor."""
-    tweets, new_cursor = await client.poll(cursor)
+    tweets, new_cursor = await client.poll(cursor, last_polled)
 
     if not tweets:
         return cursor  # unchanged
@@ -109,6 +111,7 @@ async def poll_step(
     users = storage.get_users()
     if not users:
         logger.warning('No registered users — skipping delivery')
+        save_cursor(new_cursor)
         return new_cursor
 
     alerts = [format_tweet(t) for t in tweets]
@@ -141,12 +144,17 @@ async def run_poll_loop(
         cursor,
     )
 
+    last_polled: datetime | None = None
+
     while True:
         try:
-            cursor = await poll_step(bot, client, storage, cursor)
+            cursor = await poll_step(
+                bot, client, storage, cursor, last_polled
+            )
         except Exception as exc:
             logger.exception('Poll iteration failed')
             await notify_admin(bot, exc)
             # Keep the same cursor — will retry next iteration
 
+        last_polled = datetime.now(timezone.utc)
         await asyncio.sleep(CONFIG.poll_interval * 60)

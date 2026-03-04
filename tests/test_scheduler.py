@@ -221,10 +221,12 @@ async def test_poll_step_no_users_skips_delivery(mock_bot):
     storage = MagicMock()
     storage.get_users.return_value = {}
 
-    result = await poll_step(mock_bot, client, storage, '50')
+    with patch('bot.scheduler.save_cursor') as mock_save:
+        result = await poll_step(mock_bot, client, storage, '50')
 
     assert result == '100'
     mock_bot.send_message.assert_not_called()
+    mock_save.assert_called_once_with('100')
 
 
 @pytest.mark.asyncio

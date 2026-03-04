@@ -196,6 +196,73 @@ SEARCH_WITH_ERRORS = {
     },
 }
 
+# API returns the since_id tweet itself (edge case bug)
+SEARCH_SINCE_ID_DUPE = {
+    'data': [
+        {
+            'id': '1900000000000000050',
+            'text': 'This is the since_id tweet returned again',
+            'author_id': '100001',
+            'created_at': '2026-03-03T16:00:00.000Z',
+            'referenced_tweets': [],
+        }
+    ],
+    'includes': {
+        'users': [
+            {
+                'id': '100001',
+                'username': 'alice',
+                'name': 'Alice Dev',
+                'verified': False,
+                'verified_type': '',
+                'public_metrics': {'followers_count': 5000},
+            }
+        ],
+    },
+    'meta': {
+        'newest_id': '1900000000000000050',
+        'oldest_id': '1900000000000000050',
+        'result_count': 1,
+    },
+}
+
+# Mix of since_id dupe + a genuine new tweet
+SEARCH_SINCE_ID_DUPE_WITH_NEW = {
+    'data': [
+        {
+            'id': '1900000000000000051',
+            'text': 'Brand new tweet',
+            'author_id': '100001',
+            'created_at': '2026-03-03T16:05:00.000Z',
+            'referenced_tweets': [],
+        },
+        {
+            'id': '1900000000000000050',
+            'text': 'This is the since_id tweet returned again',
+            'author_id': '100001',
+            'created_at': '2026-03-03T16:00:00.000Z',
+            'referenced_tweets': [],
+        },
+    ],
+    'includes': {
+        'users': [
+            {
+                'id': '100001',
+                'username': 'alice',
+                'name': 'Alice Dev',
+                'verified': False,
+                'verified_type': '',
+                'public_metrics': {'followers_count': 5000},
+            }
+        ],
+    },
+    'meta': {
+        'newest_id': '1900000000000000051',
+        'oldest_id': '1900000000000000050',
+        'result_count': 2,
+    },
+}
+
 SEARCH_MULTI_MEDIA = {
     'data': [
         {

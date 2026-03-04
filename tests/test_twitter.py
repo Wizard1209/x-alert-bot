@@ -13,6 +13,8 @@ from tests.fixtures.x_api_responses import (
     SEARCH_ORIGINAL,
     SEARCH_REPLY,
     SEARCH_RETWEET,
+    SEARCH_SINCE_ID_DUPE,
+    SEARCH_SINCE_ID_DUPE_WITH_NEW,
     SEARCH_WITH_ERRORS,
 )
 
@@ -160,4 +162,64 @@ async def test_poll_multi_cursor(make_twitter_client):
 
     assert len(tweets) == 2
     assert cursor == '1900000000000000010'
+    await client.close()
+
+
+@pytest.mark.asyncio
+async def test_poll_filters_since_id_dupe(make_twitter_client):
+    """API returning the since_id tweet itself is filtered out."""
+    client = make_twitter_client(SEARCH_SINCE_ID_DUPE)
+    tweets, cursor = await client.poll(
+        since_id='1900000000000000050'
+    )
+
+    assert tweets == []
+    assert cursor is None
+    await client.close()
+
+
+@pytest.mark.asyncio
+async def test_poll_filters_since_id_dupe_keeps_new(
+    make_twitter_client,
+):
+    """Dupe filtered but genuine new tweets kept."""
+    client = make_twitter_client(SEARCH_SINCE_ID_DUPE_WITH_NEW)
+    tweets, cursor = await client.poll(
+        since_id='1900000000000000050'
+    )
+
+    assert len(tweets) == 1
+    assert tweets[0].id == '1900000000000000051'
+    assert cursor == '1900000000000000051'
+    await client.close()
+
+
+@pytest.mark.asyncio
+async def test_poll_last_polled_as_start_time(make_twitter_client):
+    """last_polled is used as start_time when no since_id."""
+    from datetime import datetime, timezone
+
+    import httpx
+
+    from bot.twitter import TwitterClient
+
+    captured_url = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured_url['url'] = str(request.url)
+        return httpx.Response(200, json=SEARCH_EMPTY, request=request)
+
+    transport = httpx.MockTransport(handler)
+    client = TwitterClient(bearer_token='test')
+    client._client = httpx.AsyncClient(
+        base_url='https://api.x.com/2',
+        headers={'Authorization': 'Bearer test'},
+        transport=transport,
+    )
+
+    last = datetime(2026, 3, 3, 10, 30, 0, tzinfo=timezone.utc)
+    await client.poll(since_id=None, last_polled=last)
+
+    assert 'start_time=2026-03-03T10%3A30%3A00Z' in captured_url['url']
+    assert 'since_id' not in captured_url['url']
     await client.close()

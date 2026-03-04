@@ -58,7 +58,9 @@ class TwitterClient:
         await self._client.aclose()
 
     async def poll(
-        self, since_id: str | None = None
+        self,
+        since_id: str | None = None,
+        last_polled: datetime | None = None,
     ) -> tuple[list[Tweet], str | None]:
         """Poll search/recent for all watched users.
 
@@ -83,9 +85,10 @@ class TwitterClient:
         if since_id:
             params['since_id'] = since_id
         else:
-            # First run: only fetch tweets from last poll_interval
-            start = datetime.now(timezone.utc) - timedelta(
-                minutes=CONFIG.poll_interval
+            # Use last poll time, or fall back to poll_interval ago
+            start = last_polled or (
+                datetime.now(timezone.utc)
+                - timedelta(minutes=CONFIG.poll_interval)
             )
             params['start_time'] = start.strftime(
                 '%Y-%m-%dT%H:%M:%SZ'
@@ -105,6 +108,13 @@ class TwitterClient:
         if not tweets_raw:
             logger.info('Poll: 0 tweets returned')
             return [], None
+
+        # Filter out the since_id tweet itself (X API edge case)
+        if since_id:
+            tweets_raw = [t for t in tweets_raw if t['id'] != since_id]
+            if not tweets_raw:
+                logger.info('Poll: 0 tweets after dedup')
+                return [], None
 
         # Build author lookup from includes
         includes = data.get('includes', {})
