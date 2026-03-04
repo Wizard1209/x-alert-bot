@@ -263,6 +263,66 @@ SEARCH_SINCE_ID_DUPE_WITH_NEW = {
     },
 }
 
+# API ignores start_time and leaks old tweets (observed in prod)
+SEARCH_OLD_TWEETS_LEAK = {
+    'data': [
+        {
+            'id': '1900000000000000100',
+            'text': 'New tweet',
+            'author_id': '100001',
+            'created_at': '2026-03-04T15:27:00.000Z',
+            'referenced_tweets': [],
+        },
+        {
+            'id': '1900000000000000090',
+            'text': 'Old tweet that should be filtered',
+            'author_id': '100002',
+            'created_at': '2026-03-04T04:52:38.000Z',
+            'referenced_tweets': [],
+        },
+        {
+            'id': '1900000000000000080',
+            'text': 'Even older tweet',
+            'author_id': '100003',
+            'created_at': '2026-03-03T12:00:00.000Z',
+            'referenced_tweets': [],
+        },
+    ],
+    'includes': {
+        'users': [
+            {
+                'id': '100001',
+                'username': 'alice',
+                'name': 'Alice Dev',
+                'verified': False,
+                'verified_type': '',
+                'public_metrics': {'followers_count': 5000},
+            },
+            {
+                'id': '100002',
+                'username': 'bob',
+                'name': 'Bob Builder',
+                'verified': False,
+                'verified_type': '',
+                'public_metrics': {'followers_count': 12000},
+            },
+            {
+                'id': '100003',
+                'username': 'charlie',
+                'name': 'Charlie Test',
+                'verified': False,
+                'verified_type': '',
+                'public_metrics': {'followers_count': 300},
+            },
+        ],
+    },
+    'meta': {
+        'newest_id': '1900000000000000100',
+        'oldest_id': '1900000000000000080',
+        'result_count': 3,
+    },
+}
+
 SEARCH_MULTI_MEDIA = {
     'data': [
         {

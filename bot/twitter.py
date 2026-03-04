@@ -82,15 +82,17 @@ class TwitterClient:
             'media.fields': 'preview_image_url,url,type',
         }
 
+        start_dt: datetime | None = None  # for client-side filtering
+
         if since_id:
             params['since_id'] = since_id
         else:
             # Use last poll time, or fall back to poll_interval ago
-            start = last_polled or (
+            start_dt = last_polled or (
                 datetime.now(timezone.utc)
                 - timedelta(minutes=CONFIG.poll_interval)
             )
-            params['start_time'] = start.strftime(
+            params['start_time'] = start_dt.strftime(
                 '%Y-%m-%dT%H:%M:%SZ'
             )
 
@@ -107,13 +109,32 @@ class TwitterClient:
         tweets_raw = data.get('data', [])
         if not tweets_raw:
             logger.info('Poll: 0 tweets returned')
-            return [], None
+            return [], since_id
 
         # Filter out the since_id tweet itself (X API edge case)
         if since_id:
             tweets_raw = [t for t in tweets_raw if t['id'] != since_id]
             if not tweets_raw:
                 logger.info('Poll: 0 tweets after dedup')
+                return [], since_id
+
+        # Client-side time filter: X API occasionally ignores
+        # start_time and returns older tweets (observed in prod).
+        if start_dt and tweets_raw:
+            before = len(tweets_raw)
+            tweets_raw = [
+                t for t in tweets_raw
+                if datetime.fromisoformat(
+                    t['created_at'].replace('Z', '+00:00')
+                ) >= start_dt
+            ]
+            if len(tweets_raw) < before:
+                logger.warning(
+                    'Dropped %d tweets older than start_time %s',
+                    before - len(tweets_raw),
+                    start_dt.isoformat(),
+                )
+            if not tweets_raw:
                 return [], None
 
         # Build author lookup from includes

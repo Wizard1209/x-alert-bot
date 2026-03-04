@@ -10,6 +10,7 @@ from tests.fixtures.x_api_responses import (
     SEARCH_EMPTY,
     SEARCH_MULTI,
     SEARCH_MULTI_MEDIA,
+    SEARCH_OLD_TWEETS_LEAK,
     SEARCH_ORIGINAL,
     SEARCH_REPLY,
     SEARCH_RETWEET,
@@ -83,7 +84,7 @@ async def test_poll_empty(make_twitter_client):
     tweets, cursor = await client.poll(since_id='1')
 
     assert tweets == []
-    assert cursor is None
+    assert cursor == '1'
     await client.close()
 
 
@@ -174,7 +175,7 @@ async def test_poll_filters_since_id_dupe(make_twitter_client):
     )
 
     assert tweets == []
-    assert cursor is None
+    assert cursor == '1900000000000000050'
     await client.close()
 
 
@@ -222,4 +223,32 @@ async def test_poll_last_polled_as_start_time(make_twitter_client):
 
     assert 'start_time=2026-03-03T10%3A30%3A00Z' in captured_url['url']
     assert 'since_id' not in captured_url['url']
+    await client.close()
+
+
+@pytest.mark.asyncio
+async def test_poll_client_side_time_filter(make_twitter_client):
+    """When API leaks old tweets, client-side filter drops them."""
+    from datetime import datetime, timezone
+
+    client = make_twitter_client(SEARCH_OLD_TWEETS_LEAK)
+    last = datetime(2026, 3, 4, 15, 26, 45, tzinfo=timezone.utc)
+    tweets, cursor = await client.poll(
+        since_id=None, last_polled=last
+    )
+
+    assert len(tweets) == 1
+    assert tweets[0].id == '1900000000000000100'
+    assert cursor == '1900000000000000100'
+    await client.close()
+
+
+@pytest.mark.asyncio
+async def test_poll_since_id_skips_time_filter(make_twitter_client):
+    """With since_id set, no client-side time filter is applied."""
+    client = make_twitter_client(SEARCH_OLD_TWEETS_LEAK)
+    tweets, cursor = await client.poll(since_id='1')
+
+    assert len(tweets) == 3
+    assert cursor == '1900000000000000100'
     await client.close()
