@@ -154,7 +154,8 @@ async def run_poll_loop(
         except Exception as exc:
             logger.exception('Poll iteration failed')
             await notify_admin(bot, exc)
-            # Keep the same cursor — will retry next iteration
-
-        last_polled = datetime.now(timezone.utc)
+            # Keep the same cursor AND last_polled — will retry
+            # the same window next iteration
+        else:
+            last_polled = datetime.now(timezone.utc)
         await asyncio.sleep(CONFIG.poll_interval * 60)
