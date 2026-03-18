@@ -22,6 +22,9 @@ class Config(BaseSettings):
     # Admin Telegram ID for error notifications
     admin_id: int | None = None
 
+    # Filter to original tweets + quotes only (exclude replies/retweets)
+    tweets_only: bool = True
+
     log_level: Literal['DEBUG', 'INFO', 'WARNING', 'ERROR'] = 'INFO'
 
     @field_validator('watch_users', mode='before')

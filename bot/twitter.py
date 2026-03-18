@@ -36,10 +36,21 @@ class Tweet:
     media_urls: list[str] = field(default_factory=list)
 
 
-def build_query(usernames: list[str]) -> str:
-    """Build search query: (from:user1 OR from:user2)."""
+def build_query(
+    usernames: list[str],
+    *,
+    tweets_only: bool = False,
+) -> str:
+    """Build search query: (from:user1 OR from:user2).
+
+    When tweets_only=True, appends -is:retweet -is:reply to exclude
+    replies and retweets at the API level (quotes still pass through).
+    """
     parts = [f'from:{u}' for u in usernames]
-    return f'({" OR ".join(parts)})'
+    q = f'({" OR ".join(parts)})'
+    if tweets_only:
+        q += ' -is:retweet -is:reply'
+    return q
 
 
 @dataclass
@@ -67,7 +78,9 @@ class TwitterClient:
         Returns (tweets, new_cursor) where new_cursor is the
         highest tweet ID in the batch (or None if no tweets).
         """
-        query = build_query(CONFIG.watch_users)
+        query = build_query(
+            CONFIG.watch_users, tweets_only=CONFIG.tweets_only
+        )
 
         params: dict[str, str | int] = {
             'query': query,

@@ -2,7 +2,7 @@
 
 import json
 from datetime import datetime, timedelta, timezone
-from unittest.mock import patch
+
 
 from bot.storage import load_cursor, save_cursor
 

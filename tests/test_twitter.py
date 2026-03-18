@@ -29,6 +29,16 @@ def test_build_query_multi():
     assert result == '(from:alice OR from:bob OR from:charlie)'
 
 
+def test_build_query_tweets_only():
+    result = build_query(['alice', 'bob'], tweets_only=True)
+    assert result == '(from:alice OR from:bob) -is:retweet -is:reply'
+
+
+def test_build_query_tweets_only_false():
+    result = build_query(['alice'], tweets_only=False)
+    assert result == '(from:alice)'
+
+
 @pytest.mark.asyncio
 async def test_poll_original_tweet(make_twitter_client):
     client = make_twitter_client(SEARCH_ORIGINAL)
